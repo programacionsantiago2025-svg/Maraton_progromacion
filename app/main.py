@@ -55,13 +55,12 @@ async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    # OSM bloquea tiles pedidos desde navegador sin Referer; se envía solo el origen
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' https://cdn.tailwindcss.com https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-        "img-src 'self' data: https://unpkg.com https://tile.openstreetmap.org; "
+        "img-src 'self' data: https://unpkg.com https://*.basemaps.cartocdn.com; "
         "connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org; "
         "font-src 'self' data:;"
     )
