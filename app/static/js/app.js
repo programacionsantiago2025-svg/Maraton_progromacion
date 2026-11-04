@@ -41,14 +41,37 @@
       data = null;
     }
     if (!resp.ok) {
-      const message = (data && data.detail) || 'Ocurrió un error inesperado';
-      throw new Error(typeof message === 'string' ? message : 'Ocurrió un error inesperado');
+      const detail = data && data.detail;
+      if (typeof detail === 'string') throw new Error(detail);
+      // Errores de validación de Pydantic: se muestra el primer mensaje legible
+      if (Array.isArray(detail) && detail.length) {
+        throw new Error(String(detail[0].msg || '').replace(/^Value error, /, '') || 'Datos inválidos');
+      }
+      throw new Error('Ocurrió un error inesperado');
     }
     return data;
   }
 
+  function showToast(message) {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.className = 'fixed z-[1400] top-20 inset-x-4 mx-auto max-w-md bg-slate-100 text-slate-900 text-sm font-medium rounded-lg px-4 py-3 shadow-lg';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.add('hidden'), 4000);
+  }
+
   // ---------- Estado de sesión en la barra superior ----------
   const authLink = document.getElementById('auth-link');
+  const openContactsBtn = document.getElementById('open-contacts');
+  if (openContactsBtn && getToken()) openContactsBtn.classList.remove('hidden');
   if (authLink && getToken()) {
     authLink.textContent = 'Cerrar sesión';
     authLink.setAttribute('href', '#');
@@ -101,6 +124,78 @@
     });
   }
 
+  // ---------- Contactos de emergencia en el registro ----------
+  const registerContacts = document.getElementById('register-contacts');
+  const addContactRowBtn = document.getElementById('add-contact-row');
+  const MAX_REGISTER_CONTACTS = 3;
+
+  function addContactRow() {
+    const index = registerContacts.children.length + 1;
+    const row = document.createElement('div');
+    row.className = 'rounded-lg bg-slate-800/60 p-3 space-y-2';
+    row.dataset.contactRow = '';
+
+    const title = document.createElement('p');
+    title.className = 'text-sm font-semibold text-slate-200';
+    title.textContent = index === 1 ? 'Contacto 1 (obligatorio)' : `Contacto ${index} (opcional)`;
+
+    const nameLabel = document.createElement('label');
+    nameLabel.className = 'block text-sm mb-1';
+    nameLabel.htmlFor = `rc-name-${index}`;
+    nameLabel.textContent = 'Nombre (ej. Mamá)';
+    const nameInput = document.createElement('input');
+    nameInput.id = `rc-name-${index}`;
+    nameInput.type = 'text';
+    nameInput.maxLength = 120;
+    nameInput.required = index === 1;
+    nameInput.autocomplete = 'off';
+    nameInput.dataset.field = 'name';
+    nameInput.className = 'w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base focus-visible:outline';
+
+    const phoneLabel = document.createElement('label');
+    phoneLabel.className = 'block text-sm mb-1';
+    phoneLabel.htmlFor = `rc-phone-${index}`;
+    phoneLabel.textContent = 'Celular con WhatsApp';
+    const phoneWrap = document.createElement('div');
+    phoneWrap.className = 'flex';
+    const prefix = document.createElement('span');
+    prefix.className = 'flex items-center px-3 rounded-l-lg bg-slate-700 border border-slate-600 text-slate-200';
+    prefix.setAttribute('aria-hidden', 'true');
+    prefix.textContent = '+57';
+    const phoneInput = document.createElement('input');
+    phoneInput.id = `rc-phone-${index}`;
+    phoneInput.type = 'tel';
+    phoneInput.inputMode = 'tel';
+    phoneInput.maxLength = 20;
+    phoneInput.required = index === 1;
+    phoneInput.placeholder = '300 123 4567';
+    phoneInput.autocomplete = 'off';
+    phoneInput.dataset.field = 'phone';
+    phoneInput.className = 'w-full min-h-[44px] rounded-r-lg bg-slate-800 border border-l-0 border-slate-600 px-3 text-base placeholder-slate-400 focus-visible:outline';
+    phoneWrap.append(prefix, phoneInput);
+
+    row.append(title, nameLabel, nameInput, phoneLabel, phoneWrap);
+    registerContacts.appendChild(row);
+    addContactRowBtn.classList.toggle('hidden', registerContacts.children.length >= MAX_REGISTER_CONTACTS);
+  }
+
+  function collectRegisterContacts() {
+    const contacts = [];
+    registerContacts.querySelectorAll('[data-contact-row]').forEach((row) => {
+      const name = row.querySelector('[data-field="name"]').value.trim();
+      const phone = row.querySelector('[data-field="phone"]').value.trim();
+      if (!name && !phone) return;
+      if (!name || !phone) throw new Error('Completa nombre y celular de cada contacto, o deja la fila vacía.');
+      contacts.push({ name, phone });
+    });
+    return contacts;
+  }
+
+  if (registerContacts && addContactRowBtn) {
+    addContactRow();
+    addContactRowBtn.addEventListener('click', addContactRow);
+  }
+
   if (registerForm) {
     registerForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -109,9 +204,10 @@
       const email = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
       try {
+        const contacts = collectRegisterContacts();
         await apiFetch('/api/auth/register', {
           method: 'POST',
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, contacts }),
         });
         const body = new URLSearchParams({ username: email, password });
         const data = await apiFetch('/api/auth/login', { method: 'POST', body });
@@ -260,7 +356,7 @@
         reportForm.reset();
         severityValue.textContent = '3';
       } catch (err) {
-        alert(err.message);
+        showToast(err.message);
       }
     });
   }
@@ -309,7 +405,7 @@
           if (guardianInterval) clearInterval(guardianInterval);
           renderGuardianStatus(Object.assign({}, session, { status: 'arrived' }));
         } catch (err) {
-          alert(err.message);
+          showToast(err.message);
         }
       });
       guardianStatus.appendChild(arrivedBtn);
@@ -343,7 +439,7 @@
         if (guardianInterval) clearInterval(guardianInterval);
         guardianInterval = setInterval(pollGuardian, 30000);
       } catch (err) {
-        alert(err.message);
+        showToast(err.message);
       }
     });
   }
@@ -353,19 +449,138 @@
   const sosHint = document.getElementById('sos-hint');
   let sosTimer = null;
 
+  const sosStatus = document.getElementById('sos-status');
+  const sosActions = document.getElementById('sos-actions');
+
+  function sosLink(href, text, className) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.className = `flex items-center justify-center w-full min-h-[56px] rounded-xl text-lg font-bold text-center px-3 focus-visible:outline ${className}`;
+    a.textContent = text;
+    return a;
+  }
+
+  function locateWithTimeout(ms) {
+    return Promise.race([
+      window.RutaMap.locateUser(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+    ]);
+  }
+
   async function triggerSOS() {
     if (!getToken()) {
       window.location.href = '/login';
       return;
     }
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    sosActions.textContent = '';
+    sosStatus.textContent = 'Obteniendo tu ubicación…';
+    openModal('sos-modal');
+
+    let location = null;
     try {
-      const data = await apiFetch('/api/sos', { method: 'POST' });
-      const contactos = data.contactos_notificados.length ? data.contactos_notificados.join(', ') : 'ninguno registrado';
-      alert(`${data.mensaje}\n\nContactos notificados: ${contactos}`);
+      location = await locateWithTimeout(5000);
     } catch (err) {
-      alert(err.message);
+      location = null;
     }
+
+    try {
+      const data = await apiFetch('/api/sos', { method: 'POST', body: JSON.stringify(location || {}) });
+      const sinUbicacion = location ? '' : ' No pudimos obtener tu ubicación; el mensaje irá sin ella.';
+      if (data.contactos.length) {
+        sosStatus.textContent = `Toca cada contacto para enviarle el mensaje por WhatsApp.${sinUbicacion}`;
+        data.contactos.forEach((c) => {
+          sosActions.appendChild(sosLink(c.whatsapp_url, `Avisar a ${c.name} por WhatsApp`, 'bg-green-700 hover:bg-green-600 text-white'));
+        });
+      } else {
+        sosStatus.textContent = `Aún no tienes contactos de emergencia.${sinUbicacion}`;
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'w-full min-h-[56px] rounded-xl bg-green-700 hover:bg-green-600 text-white text-lg font-bold focus-visible:outline';
+        addBtn.textContent = 'Agregar contactos';
+        addBtn.addEventListener('click', () => {
+          closeModal('sos-modal');
+          openContactsModal();
+        });
+        sosActions.appendChild(addBtn);
+      }
+      sosActions.appendChild(sosLink(data.whatsapp_compartir, 'Enviar a otra persona por WhatsApp', 'bg-slate-700 hover:bg-slate-600 text-white text-base'));
+    } catch (err) {
+      sosStatus.textContent = `${err.message}. Si estás en peligro, llama al 123.`;
+    }
+  }
+
+  // ---------- Contactos de emergencia (modal) ----------
+  const contactsList = document.getElementById('contacts-list');
+  const contactForm = document.getElementById('contact-form');
+  const contactsStatus = document.getElementById('contacts-status');
+
+  async function loadContacts() {
+    contactsList.textContent = '';
+    const contactos = await apiFetch('/api/contacts');
+    if (!contactos.length) {
+      const empty = document.createElement('li');
+      empty.className = 'text-sm text-slate-400';
+      empty.textContent = 'Todavía no has agregado contactos.';
+      contactsList.appendChild(empty);
+    }
+    contactos.forEach((c) => {
+      const li = document.createElement('li');
+      li.className = 'flex items-center justify-between gap-2 rounded-lg bg-slate-800 px-3 py-2';
+      const info = document.createElement('div');
+      const name = document.createElement('p');
+      name.className = 'font-semibold';
+      name.textContent = c.name;
+      const phone = document.createElement('p');
+      phone.className = 'text-sm text-slate-300';
+      phone.textContent = `+${c.phone}`;
+      info.append(name, phone);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'min-h-[44px] px-3 rounded-lg bg-slate-700 hover:bg-red-700 text-sm font-medium focus-visible:outline';
+      del.textContent = 'Eliminar';
+      del.setAttribute('aria-label', `Eliminar a ${c.name}`);
+      del.addEventListener('click', async () => {
+        try {
+          await apiFetch(`/api/contacts/${c.id}`, { method: 'DELETE' });
+          await loadContacts();
+        } catch (err) {
+          contactsStatus.textContent = err.message;
+        }
+      });
+      li.append(info, del);
+      contactsList.appendChild(li);
+    });
+  }
+
+  async function openContactsModal() {
+    contactsStatus.textContent = '';
+    openModal('contacts-modal');
+    try {
+      await loadContacts();
+    } catch (err) {
+      contactsStatus.textContent = err.message;
+    }
+  }
+
+  if (openContactsBtn) openContactsBtn.addEventListener('click', openContactsModal);
+
+  if (contactForm) {
+    contactForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const name = document.getElementById('contact-name').value.trim();
+      const phone = document.getElementById('contact-phone').value.trim();
+      try {
+        await apiFetch('/api/contacts', { method: 'POST', body: JSON.stringify({ name, phone }) });
+        contactForm.reset();
+        contactsStatus.textContent = 'Contacto agregado.';
+        await loadContacts();
+      } catch (err) {
+        contactsStatus.textContent = err.message;
+      }
+    });
   }
 
   if (sosBtn) {

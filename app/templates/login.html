@@ -43,6 +43,18 @@
         <input id="register-password" type="password" required minlength="8" autocomplete="new-password"
           class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 focus-visible:outline">
       </div>
+      <fieldset class="space-y-3 border-t border-slate-700 pt-4">
+        <legend class="text-base font-semibold">Contactos de emergencia</legend>
+        <p class="text-sm text-slate-300">
+          Si mantienes presionado <strong class="text-red-400">SOS</strong>, podrás avisarles por WhatsApp
+          con tu ubicación en un solo toque.
+        </p>
+        <div id="register-contacts" class="space-y-3"></div>
+        <button id="add-contact-row" type="button"
+          class="w-full min-h-[44px] rounded-lg border border-dashed border-slate-500 text-slate-200 font-medium focus-visible:outline">
+          + Agregar otro contacto
+        </button>
+      </fieldset>
       <button type="submit"
         class="w-full min-h-[44px] rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold focus-visible:outline">Registrarme</button>
     </form>
