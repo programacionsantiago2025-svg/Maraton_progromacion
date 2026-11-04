@@ -1,0 +1,12 @@
+{
+  "name": "RutaSegura",
+  "short_name": "RutaSegura",
+  "description": "Ruta segura para mujeres en el espacio público nocturno",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "es",
+  "icons": []
+}
