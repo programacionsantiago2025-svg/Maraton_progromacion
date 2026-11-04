@@ -3,6 +3,16 @@
   const DEFAULT_CENTER = [4.6097, -74.0817]; // Bogotá
   const DEFAULT_ZOOM = 13;
 
+  if (typeof window.L === 'undefined') {
+    console.error('Leaflet no se cargó: el mapa no está disponible');
+    const errorBox = document.getElementById('map-error');
+    if (errorBox) {
+      errorBox.textContent = 'No se pudo cargar el mapa. Recarga la página.';
+      errorBox.classList.remove('hidden');
+    }
+    return;
+  }
+
   const map = L.map('map', {
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,

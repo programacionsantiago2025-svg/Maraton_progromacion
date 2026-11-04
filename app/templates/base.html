@@ -7,8 +7,9 @@
   <meta name="description" content="Ruta segura para mujeres en el espacio público nocturno">
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="/static/manifest.json">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <!-- Librerías servidas localmente: algunas redes bloquean unpkg/CDNs y el mapa no cargaba -->
+  <script src="/static/vendor/tailwind/tailwind-3.4.17.js"></script>
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
   <style>
     html, body { height: 100%; margin: 0; background: #0f172a; color: #f1f5f9; }
     .map-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9); }
@@ -28,7 +29,7 @@
 </head>
 <body class="min-h-screen antialiased">
   {% block content %}{% endblock %}
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/vendor/leaflet/leaflet.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

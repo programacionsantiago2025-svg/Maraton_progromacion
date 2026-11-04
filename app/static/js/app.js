@@ -262,7 +262,9 @@
     card.appendChild(header);
     card.appendChild(meta);
     card.appendChild(explanation);
-    card.addEventListener('click', () => window.RutaMap.highlightRoute(currentPolylines, index));
+    card.addEventListener('click', () => {
+      if (window.RutaMap) window.RutaMap.highlightRoute(currentPolylines, index);
+    });
     return card;
   }
 
@@ -277,7 +279,8 @@
         const params = new URLSearchParams({ origin, destination });
         const data = await apiFetch(`/api/routes?${params.toString()}`);
         routeStatus.textContent = `${data.rutas.length} ruta(s) encontrada(s).`;
-        currentPolylines = window.RutaMap.drawRoutes(data.rutas);
+        // Si el mapa no cargó, igual se muestran las tarjetas con las rutas
+        currentPolylines = window.RutaMap ? window.RutaMap.drawRoutes(data.rutas) : [];
         data.rutas.forEach((ruta, index) => routeResults.appendChild(renderRouteCard(ruta, index)));
       } catch (err) {
         routeStatus.textContent = err.message;
