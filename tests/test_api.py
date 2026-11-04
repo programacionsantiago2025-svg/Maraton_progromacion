@@ -82,6 +82,12 @@ def test_safety_score_penalizes_recent_harassment_report():
     assert "acoso" in con_riesgo["breakdown"]["explicacion"]
 
 
+def test_tiles_rechaza_coordenadas_invalidas(client):
+    assert client.get("/tiles/20/0/0.png").status_code == 422
+    assert client.get("/tiles/2/4/0.png").status_code == 404
+    assert client.get("/tiles/2/0/abc.png").status_code == 422
+
+
 def test_guardian_and_sos_lifecycle(client):
     headers = _auth_headers(client)
 
