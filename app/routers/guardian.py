@@ -34,8 +34,12 @@ def _get_session_or_404(session_id: int, user: User, db: Session) -> GuardianSes
 
 def _maybe_mark_alert(session: GuardianSession) -> GuardianSession:
     # Evaluación perezosa del vencimiento del ETA, sin workers en segundo plano
-    if session.status == "active" and datetime.now(timezone.utc) > session.eta_at:
-        session.status = "alert"
+    if session.status == "active":
+        eta = session.eta_at
+        if eta.tzinfo is None:
+            eta = eta.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > eta:
+            session.status = "alert"
     return session
 
 

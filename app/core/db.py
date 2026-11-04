@@ -14,6 +14,13 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 
+def switch_to_sqlite():
+    global engine
+    engine = create_engine("sqlite:///./rutasegura.db", connect_args={"check_same_thread": False})
+    SessionLocal.configure(bind=engine)
+    return engine
+
+
 def get_db():
     db = SessionLocal()
     try:
