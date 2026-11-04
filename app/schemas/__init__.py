@@ -9,6 +9,9 @@ SafePointKind = Literal["cai", "farmacia", "tienda", "gasolinera"]
 GuardianStatus = Literal["active", "arrived", "alert"]
 
 
+MAX_CONTACTOS = 5
+
+
 def normalizar_celular(phone: str) -> str:
     """WhatsApp (wa.me) exige el número internacional solo con dígitos; 57 = Colombia."""
     digits = re.sub(r"\D", "", phone)
@@ -44,7 +47,14 @@ class UserRegister(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=120)
     password: str = Field(min_length=8, max_length=128)
-    contacts: list[ContactCreate] = Field(default_factory=list, max_length=5)
+    contacts: list[ContactCreate] = Field(default_factory=list, max_length=MAX_CONTACTOS)
+
+    @field_validator("contacts")
+    @classmethod
+    def sin_repetidos(cls, v: list[ContactCreate]) -> list[ContactCreate]:
+        if len({c.phone for c in v}) != len(v):
+            raise ValueError("No repitas el mismo número de celular")
+        return v
 
 
 class UserOut(BaseModel):
@@ -152,10 +162,14 @@ class SOSRequest(BaseModel):
 class SOSContacto(BaseModel):
     name: str
     phone: str
+    # enviado: salió automáticamente · fallido: el envío automático falló · manual: requiere un toque de la usuaria
+    estado: Literal["enviado", "fallido", "manual"]
+    detalle: str | None = None
     whatsapp_url: str
 
 
 class SOSOut(BaseModel):
     mensaje: str
+    automatico: bool
     contactos: list[SOSContacto]
     whatsapp_compartir: str
