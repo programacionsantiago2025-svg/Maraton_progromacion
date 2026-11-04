@@ -23,7 +23,9 @@ Guion paso a paso:
    y mostrar **en vivo** cómo baja el ISN de esa ruta y cambia la explicación.
 5. Activar el Modo Guardián con 1 minuto para forzar visualmente el estado "alerta" sin
    hacer check-in (opcional si el tiempo apremia).
-6. Mostrar el botón SOS (mantener presionado 1 s) y el mensaje simulado a contactos.
+6. Mantener presionado SOS 1 s: se abre la pantalla de emergencia; tocar el contacto
+   registrado y mostrar que WhatsApp abre con el mensaje y el enlace de ubicación listos.
+   Explicar que la usuaria solo toca "enviar" y que la ubicación no se guarda en el servidor.
 
 ## 3. Arquitectura (1.5 min)
 "Es una arquitectura MVC clásica: FastAPI como backend (routers → services → models), con
