@@ -15,6 +15,11 @@ docker compose up --build
 La base de datos se crea e inicializa automáticamente (esquema + ~15 puntos seguros de
 ejemplo en Bogotá, Soacha y Fusagasugá) la primera vez que arranca el contenedor `api`.
 
+`.env.example` trae una `SECRET_KEY` de ejemplo para que la demo arranque. Para cualquier uso
+real, reemplázala por una aleatoria de al menos 32 caracteres
+(`python -c "import secrets; print(secrets.token_urlsafe(32))"`); la app no arranca con una
+clave más corta.
+
 ## Funcionalidades
 
 - Registro/login con JWT y contraseñas con Argon2id.
