@@ -1,21 +1,27 @@
 import uuid
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.safety_score import ReporteLike, compute_isn
 
-client = TestClient(app)
+
+@pytest.fixture(scope="module")
+def client():
+    # Sin el "with", TestClient no ejecuta el lifespan (creación de tablas y semilla)
+    with TestClient(app) as c:
+        yield c
 
 
-def test_health():
+def test_health(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
 
 
-def test_register_login_and_me():
+def test_register_login_and_me(client):
     email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     resp = client.post(
         "/api/auth/register",
@@ -32,7 +38,7 @@ def test_register_login_and_me():
     assert resp.json()["email"] == email
 
 
-def test_safe_points_near_bogota():
+def test_safe_points_near_bogota(client):
     resp = client.get("/api/safe-points", params={"lat": 4.6482, "lng": -74.0648, "radius": 2000})
     assert resp.status_code == 200
     points = resp.json()
@@ -40,7 +46,7 @@ def test_safe_points_near_bogota():
     assert len(points) >= 1
 
 
-def test_create_and_list_report():
+def test_create_and_list_report(client):
     resp = client.post(
         "/api/reports",
         json={"type": "poca_luz", "severity": 3, "description": "Calle oscura", "lat": 4.65, "lng": -74.06},
