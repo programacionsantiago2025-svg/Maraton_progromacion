@@ -29,7 +29,11 @@ clave más corta.
   coloreadas y ordenadas por **Índice de Seguridad Nocturna (ISN)**, con desglose explicado.
 - Modo Guardián: temporizador de llegada con check-in; pasa a alerta si no confirmas a
   tiempo.
-- Botón SOS (mantener presionado) con contactos de confianza.
+- Contactos de emergencia desde el registro. El botón SOS (mantener presionado 1 s) abre
+  una pantalla de emergencia con un botón por contacto que abre WhatsApp con el mensaje y la
+  ubicación listos (la usuaria solo toca "enviar"), además de "Llamar al 123". El envío
+  automático sin intervención requeriría la API de WhatsApp Business (cuenta verificada de
+  Meta y plantillas aprobadas), fuera del alcance de la maratón.
 
 ## Pruebas
 
