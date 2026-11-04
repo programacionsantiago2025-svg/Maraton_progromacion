@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from app.core.db import Base, engine
 from app.core.limiter import limiter
-from app.routers import auth, pages, safe_points
+from app.routers import auth, pages, reports, safe_points
 from scripts.seed import seed_if_empty
 
 app = FastAPI(title="RutaSegura")
@@ -21,6 +21,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(pages.router)
 app.include_router(auth.router)
 app.include_router(auth.me_router)
+app.include_router(reports.router)
 app.include_router(safe_points.router)
 
 
