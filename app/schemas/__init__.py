@@ -1,11 +1,42 @@
+import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 ReportType = Literal["poca_luz", "acoso", "calle_sola", "zona_segura"]
 SafePointKind = Literal["cai", "farmacia", "tienda", "gasolinera"]
 GuardianStatus = Literal["active", "arrived", "alert"]
+
+
+def normalizar_celular(phone: str) -> str:
+    """WhatsApp (wa.me) exige el número internacional solo con dígitos; 57 = Colombia."""
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) == 10 and digits.startswith("3"):
+        digits = "57" + digits
+    return digits
+
+
+# ---------- Contacts ----------
+class ContactCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    phone: str = Field(min_length=1, max_length=30)
+
+    @field_validator("phone")
+    @classmethod
+    def validar_celular(cls, v: str) -> str:
+        digits = normalizar_celular(v)
+        if not 11 <= len(digits) <= 15:
+            raise ValueError("Escribe un celular de 10 dígitos, por ejemplo 300 123 4567")
+        return digits
+
+
+class ContactOut(BaseModel):
+    id: int
+    name: str
+    phone: str
+
+    model_config = {"from_attributes": True}
 
 
 # ---------- Auth ----------
@@ -13,6 +44,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=120)
     password: str = Field(min_length=8, max_length=128)
+    contacts: list[ContactCreate] = Field(default_factory=list, max_length=5)
 
 
 class UserOut(BaseModel):
@@ -112,20 +144,18 @@ class GuardianOut(BaseModel):
 
 
 # ---------- SOS ----------
-class SOSOut(BaseModel):
-    mensaje: str
-    contactos_notificados: list[str]
+class SOSRequest(BaseModel):
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
 
 
-# ---------- Contacts ----------
-class ContactCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    phone: str = Field(min_length=1, max_length=30)
-
-
-class ContactOut(BaseModel):
-    id: int
+class SOSContacto(BaseModel):
     name: str
     phone: str
+    whatsapp_url: str
 
-    model_config = {"from_attributes": True}
+
+class SOSOut(BaseModel):
+    mensaje: str
+    contactos: list[SOSContacto]
+    whatsapp_compartir: str
