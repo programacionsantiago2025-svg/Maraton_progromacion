@@ -1,9 +1,16 @@
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 .venv/
 venv/
 .pytest_cache/
+.idea/
+.vscode/
+*.log
 pgdata/
-*.egg-info/
 .DS_Store
+*.sqlite3
+node_modules/
+*.egg-info/
