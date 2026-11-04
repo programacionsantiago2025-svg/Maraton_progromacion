@@ -10,6 +10,11 @@
      aria-label="Iniciar sesión o cerrar sesión">Iniciar sesión</a>
 </header>
 
+<div id="map-error" role="status" aria-live="polite"
+  class="hidden fixed z-[1000] top-20 inset-x-4 bg-amber-100 text-amber-950 text-sm rounded-lg px-3 py-2 shadow">
+  No se pudo cargar el mapa base. Los puntos seguros, reportes y rutas siguen funcionando.
+</div>
+
 <div class="fixed inset-x-0 bottom-0 z-[1000]">
   <!-- SOS anclado al borde superior del panel: sigue visible sin tapar sus controles -->
   <button id="sos-btn" type="button"

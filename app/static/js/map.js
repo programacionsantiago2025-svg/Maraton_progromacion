@@ -13,12 +13,16 @@
   // Arriba a la derecha: abajo la taparía el panel, y la atribución es obligatoria (ODbL)
   L.control.attribution({ position: 'topright' }).addTo(map);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+  // Tiles servidos por nuestro backend (proxy con caché de OpenStreetMap)
+  const baseTiles = L.tileLayer('/tiles/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    className: 'map-tiles-dark',
     maxZoom: 19,
   }).addTo(map);
+
+  const mapError = document.getElementById('map-error');
+  baseTiles.on('tileerror', () => mapError.classList.remove('hidden'));
+  baseTiles.on('tileload', () => mapError.classList.add('hidden'));
 
   const safePointsLayer = L.layerGroup().addTo(map);
   const reportsLayer = L.layerGroup().addTo(map);

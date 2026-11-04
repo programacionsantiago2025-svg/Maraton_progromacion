@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from app.core.db import Base, engine
 from app.core.limiter import limiter
-from app.routers import auth, guardian, pages, reports, routes, safe_points
+from app.routers import auth, guardian, pages, reports, routes, safe_points, tiles
 from scripts.seed import seed_if_empty
 
 
@@ -48,6 +48,7 @@ app.include_router(reports.router)
 app.include_router(safe_points.router)
 app.include_router(routes.router)
 app.include_router(guardian.router)
+app.include_router(tiles.router)
 
 
 @app.middleware("http")
@@ -60,7 +61,7 @@ async def security_headers(request: Request, call_next):
         "default-src 'self'; "
         "script-src 'self' https://cdn.tailwindcss.com https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-        "img-src 'self' data: https://unpkg.com https://*.basemaps.cartocdn.com; "
+        "img-src 'self' data: https://unpkg.com; "
         "connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org; "
         "font-src 'self' data:;"
     )
