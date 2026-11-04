@@ -49,6 +49,7 @@ pura (ISN, geocodificación, ruteo), `models` es la capa de persistencia (SQLAlc
 | **PyJWT** para JWT | `python-jose` | `python-jose` está abandonado (sin commits recientes, con CVEs reportados). PyJWT es mantenido activamente y es la recomendación actual de FastAPI para emitir/verificar JWT. |
 | **Reportes NO georreferenciados en vivo para "puntos seguros"**; se cargan con `seed.py` | Un directorio en vivo / API externa de POIs | Evita depender de una API externa adicional y frágil (cuotas, disponibilidad) para un dato que cambia poco. Los puntos de ejemplo cubren Bogotá, Soacha y Fusagasugá. |
 | **`slowapi`** para *rate limiting* | Nginx / middleware propio | Mitigación directa de fuerza bruta en login/registro y espamming de reportes (OWASP A04/A07) con una librería ligera, sin infraestructura adicional. |
+| **Tiles oscuros de CARTO** (datos de OpenStreetMap) | Servidores `tile.openstreetmap.org` con filtro CSS de inversión | Los servidores voluntarios de OSM bloquearon las peticiones de la app en las pruebas (403 "Access blocked" en escritorio, mapa vacío en el celular). CARTO sirve los mismos datos abiertos de OSM, está pensado para uso en apps y ya trae tema oscuro, por lo que no se necesita el filtro CSS. |
 
 ## 4. Modelo de datos
 
@@ -108,7 +109,7 @@ rastrearse hasta reportes y puntos seguros concretos. Se documenta explícitamen
   a 5/min, y `POST /api/reports` a 10/min por IP.
 - **A05 Configuración de seguridad incorrecta**: cabeceras `X-Content-Type-Options`,
   `X-Frame-Options: DENY`, `Referrer-Policy`, y una CSP que solo permite los orígenes
-  necesarios (Tailwind CDN, unpkg para Leaflet, tiles de OSM, OSRM y Nominatim); sin CORS
+  necesarios (Tailwind CDN, unpkg para Leaflet, tiles de CARTO, OSRM y Nominatim); sin CORS
   abierto (mismo origen).
 - **A07 Identificación y autenticación**: JWT con expiración (`exp`, 60 min).
 - **XSS**: el frontend construye el DOM con `textContent`/`createElement`, nunca `innerHTML`

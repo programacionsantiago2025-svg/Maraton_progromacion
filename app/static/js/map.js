@@ -7,11 +7,16 @@
     center: DEFAULT_CENTER,
     zoom: DEFAULT_ZOOM,
     zoomControl: true,
+    attributionControl: false,
   });
 
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    className: 'map-tiles-dark',
+  // Arriba a la derecha: abajo la taparía el panel, y la atribución es obligatoria (ODbL)
+  L.control.attribution({ position: 'topright' }).addTo(map);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
     maxZoom: 19,
   }).addTo(map);
 

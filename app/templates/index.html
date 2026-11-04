@@ -10,16 +10,18 @@
      aria-label="Iniciar sesión o cerrar sesión">Iniciar sesión</a>
 </header>
 
-<button id="sos-btn" type="button"
-  class="fixed z-[1100] bottom-28 right-4 w-16 h-16 rounded-full bg-red-600 text-white font-extrabold text-sm shadow-lg border-4 border-red-300 focus-visible:outline"
-  aria-label="Botón de emergencia SOS. Mantén presionado un segundo para enviar la alerta.">
-  SOS
-</button>
-<div id="sos-hint"
-  class="hidden fixed z-[1100] bottom-[11.5rem] right-4 bg-slate-900 text-slate-50 text-xs px-2 py-1 rounded"
-  role="status" aria-live="polite">Mantén presionado…</div>
+<div class="fixed inset-x-0 bottom-0 z-[1000]">
+  <!-- SOS anclado al borde superior del panel: sigue visible sin tapar sus controles -->
+  <button id="sos-btn" type="button"
+    class="absolute bottom-full right-4 mb-3 w-16 h-16 rounded-full bg-red-600 text-white font-extrabold text-sm shadow-lg border-4 border-red-300 select-none touch-none focus-visible:outline"
+    aria-label="Botón de emergencia SOS. Mantén presionado un segundo para enviar la alerta.">
+    SOS
+  </button>
+  <div id="sos-hint"
+    class="hidden absolute bottom-full right-24 mb-8 bg-slate-900 text-slate-50 text-xs px-2 py-1 rounded"
+    role="status" aria-live="polite">Mantén presionado…</div>
 
-<section id="bottom-sheet" class="fixed inset-x-0 bottom-0 z-[1000] bg-slate-900/95 rounded-t-2xl shadow-2xl max-h-[70vh] overflow-y-auto">
+<section id="bottom-sheet" class="bg-slate-900/95 rounded-t-2xl shadow-2xl max-h-[70vh] overflow-y-auto">
   <button id="sheet-toggle" type="button" aria-label="Expandir o colapsar el panel" aria-expanded="true"
     class="w-full flex justify-center py-2 focus-visible:outline">
     <span class="w-10 h-1.5 bg-slate-500 rounded-full" aria-hidden="true"></span>
@@ -61,6 +63,7 @@
     <div id="guardian-status" class="hidden rounded-lg bg-slate-800 p-3 text-sm space-y-2" role="status" aria-live="polite"></div>
   </div>
 </section>
+</div>
 
 <!-- Modal: reportar -->
 <div id="report-modal" class="hidden fixed inset-0 z-[1200] bg-black/70 flex items-end sm:items-center justify-center p-4"
