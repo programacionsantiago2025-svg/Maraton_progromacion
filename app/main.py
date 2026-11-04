@@ -61,7 +61,7 @@ async def security_headers(request: Request, call_next):
         "default-src 'self'; "
         "script-src 'self' https://cdn.tailwindcss.com https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-        "img-src 'self' data: https://unpkg.com https://*.tile.openstreetmap.org; "
+        "img-src 'self' data: https://unpkg.com https://tile.openstreetmap.org; "
         "connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org; "
         "font-src 'self' data:;"
     )
