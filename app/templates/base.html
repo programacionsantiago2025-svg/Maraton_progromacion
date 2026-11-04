@@ -11,7 +11,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     html, body { height: 100%; margin: 0; background: #0f172a; color: #f1f5f9; }
-    .map-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9); }
+    /* Baja los controles del mapa (zoom, atribución) para que no queden bajo la barra superior */
+    .leaflet-top { top: 4.5rem; }
     :focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
