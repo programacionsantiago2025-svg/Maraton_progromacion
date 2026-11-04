@@ -384,5 +384,7 @@
     sosBtn.addEventListener('pointerup', cancelHold);
     sosBtn.addEventListener('pointerleave', cancelHold);
     sosBtn.addEventListener('pointercancel', cancelHold);
+    // En móvil, el menú contextual del toque largo cancelaría la pulsación de 1 s
+    sosBtn.addEventListener('contextmenu', (ev) => ev.preventDefault());
   }
 })();
