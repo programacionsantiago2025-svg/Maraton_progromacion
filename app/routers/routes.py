@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,8 +22,7 @@ async def buscar_rutas(
     db: Session = Depends(get_db),
 ):
     try:
-        origin_latlng = await geocode(origin)
-        destination_latlng = await geocode(destination)
+        origin_latlng, destination_latlng = await asyncio.gather(geocode(origin), geocode(destination))
     except GeocodingError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
@@ -54,7 +54,8 @@ async def buscar_rutas(
         resultado = compute_isn(ruta["geometry"], reports, safe_points, now=now)
         calculadas.append(
             {
-                "geometry": [[lat, lng] for lat, lng in ruta["geometry"]],
+                # 5 decimales (~1 m) bastan para dibujar y reducen el tamaño de la respuesta
+                "geometry": [[round(lat, 5), round(lng, 5)] for lat, lng in ruta["geometry"]],
                 "distance_m": ruta["distance_m"],
                 "duration_s": ruta["duration_s"],
                 "isn": resultado["isn"],

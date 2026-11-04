@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.limiter import limiter
 from app.models import GuardianSession, TrustedContact, User
 from app.schemas import (
+    MAX_CONTACTOS,
     ContactCreate,
     ContactOut,
     GuardianCheckin,
@@ -18,6 +20,7 @@ from app.schemas import (
     SOSRequest,
     normalizar_celular,
 )
+from app.services import whatsapp
 
 router = APIRouter(prefix="/api", tags=["guardian"])
 
@@ -103,29 +106,49 @@ def get_guardian(
 
 
 @router.post("/sos", response_model=SOSOut)
-def sos(
+@limiter.limit("6/minute")
+async def sos(
+    request: Request,
     data: SOSRequest | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # La ubicación solo viaja en el mensaje que envía la usuaria; no se guarda (Ley 1581)
+    # La ubicación solo viaja en el mensaje; no se guarda ni se registra en logs (Ley 1581)
     data = data or SOSRequest()
-    contactos = db.query(TrustedContact).filter(TrustedContact.user_id == current_user.id).all()
-    mensaje = f"EMERGENCIA: {current_user.name} necesita ayuda."
+    contactos = (
+        db.query(TrustedContact).filter(TrustedContact.user_id == current_user.id).order_by(TrustedContact.id).all()
+    )
+    ubicacion_url = None
     if data.lat is not None and data.lng is not None:
-        mensaje += f" Mi ubicación: https://maps.google.com/?q={data.lat:.5f},{data.lng:.5f}"
+        ubicacion_url = f"https://maps.google.com/?q={data.lat:.5f},{data.lng:.5f}"
+    mensaje = f"EMERGENCIA: {current_user.name} necesita ayuda."
+    if ubicacion_url:
+        mensaje += f" Mi ubicación: {ubicacion_url}"
     mensaje += " Si no respondo, llama al 123. (Enviado desde RutaSegura)"
     texto = quote(mensaje)
-    return SOSOut(
-        mensaje=mensaje,
-        contactos=[
+
+    automatico = whatsapp.configurado() and bool(contactos)
+    if automatico:
+        resultados = await whatsapp.enviar_a_todos([c.phone for c in contactos], current_user.name, ubicacion_url, mensaje)
+    else:
+        resultados = [(False, None)] * len(contactos)
+
+    salida = []
+    for c, (ok, detalle) in zip(contactos, resultados):
+        estado = "enviado" if ok else ("fallido" if automatico else "manual")
+        salida.append(
             SOSContacto(
                 name=c.name,
                 phone=c.phone,
+                estado=estado,
+                detalle=detalle,
                 whatsapp_url=f"https://wa.me/{normalizar_celular(c.phone)}?text={texto}",
             )
-            for c in contactos
-        ],
+        )
+    return SOSOut(
+        mensaje=mensaje,
+        automatico=automatico,
+        contactos=salida,
         whatsapp_compartir=f"https://wa.me/?text={texto}",
     )
 
@@ -141,6 +164,14 @@ def create_contact(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    existentes = db.query(TrustedContact).filter(TrustedContact.user_id == current_user.id).all()
+    if len(existentes) >= MAX_CONTACTOS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Puedes tener hasta {MAX_CONTACTOS} contactos de emergencia",
+        )
+    if any(c.phone == data.phone for c in existentes):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese número ya está en tus contactos")
     contact = TrustedContact(user_id=current_user.id, name=data.name, phone=data.phone)
     db.add(contact)
     db.commit()
