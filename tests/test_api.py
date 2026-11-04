@@ -105,9 +105,36 @@ def test_guardian_and_sos_lifecycle(client):
     resp = client.post(f"/api/guardian/{session_id}/arrived", headers=headers)
     assert resp.json()["status"] == "arrived"
 
-    resp = client.post("/api/sos", headers=headers)
+    resp = client.post("/api/sos", json={"lat": 4.65, "lng": -74.06}, headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["contactos_notificados"] == ["3001234567"]
+    body = resp.json()
+    assert "maps.google.com/?q=4.65000,-74.06000" in body["mensaje"]
+    assert body["contactos"][0]["whatsapp_url"].startswith("https://wa.me/573001234567?text=EMERGENCIA")
+
+
+def test_registro_con_contactos_de_emergencia(client):
+    email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    resp = client.post(
+        "/api/auth/register",
+        json={
+            "email": email,
+            "name": "Ana",
+            "password": "clave12345",
+            "contacts": [{"name": "Mamá", "phone": "300 123 4567"}, {"name": "Juan", "phone": "+57 310-555-0000"}],
+        },
+    )
+    assert resp.status_code == 201
+    token = client.post("/api/auth/login", data={"username": email, "password": "clave12345"}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    contactos = client.get("/api/contacts", headers=headers).json()
+    assert [c["phone"] for c in contactos] == ["573001234567", "573105550000"]
+
+    resp = client.post("/api/contacts", json={"name": "X", "phone": "123"}, headers=headers)
+    assert resp.status_code == 422
+
+    assert client.delete(f"/api/contacts/{contactos[0]['id']}", headers=headers).status_code == 204
+    assert len(client.get("/api/contacts", headers=headers).json()) == 1
 
 
 def test_guardian_pasa_a_alerta_al_vencer_eta(client):

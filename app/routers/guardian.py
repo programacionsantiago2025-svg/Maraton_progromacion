@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -12,7 +13,10 @@ from app.schemas import (
     GuardianCheckin,
     GuardianOut,
     GuardianStart,
+    SOSContacto,
     SOSOut,
+    SOSRequest,
+    normalizar_celular,
 )
 
 router = APIRouter(prefix="/api", tags=["guardian"])
@@ -99,12 +103,31 @@ def get_guardian(
 
 
 @router.post("/sos", response_model=SOSOut)
-def sos(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def sos(
+    data: SOSRequest | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # La ubicación solo viaja en el mensaje que envía la usuaria; no se guarda (Ley 1581)
+    data = data or SOSRequest()
     contactos = db.query(TrustedContact).filter(TrustedContact.user_id == current_user.id).all()
-    mensaje = (
-        f"Alerta SOS de {current_user.name}: necesito ayuda, por favor contáctame o llama a la línea de emergencia (123)."
+    mensaje = f"EMERGENCIA: {current_user.name} necesita ayuda."
+    if data.lat is not None and data.lng is not None:
+        mensaje += f" Mi ubicación: https://maps.google.com/?q={data.lat:.5f},{data.lng:.5f}"
+    mensaje += " Si no respondo, llama al 123. (Enviado desde RutaSegura)"
+    texto = quote(mensaje)
+    return SOSOut(
+        mensaje=mensaje,
+        contactos=[
+            SOSContacto(
+                name=c.name,
+                phone=c.phone,
+                whatsapp_url=f"https://wa.me/{normalizar_celular(c.phone)}?text={texto}",
+            )
+            for c in contactos
+        ],
+        whatsapp_compartir=f"https://wa.me/?text={texto}",
     )
-    return SOSOut(mensaje=mensaje, contactos_notificados=[c.phone for c in contactos])
 
 
 @router.get("/contacts", response_model=list[ContactOut])
@@ -123,3 +146,17 @@ def create_contact(
     db.commit()
     db.refresh(contact)
     return contact
+
+
+@router.delete("/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_contact(
+    contact_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contact = db.get(TrustedContact, contact_id)
+    if contact is None or contact.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contacto no encontrado")
+    db.delete(contact)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

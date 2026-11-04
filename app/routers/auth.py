@@ -6,7 +6,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.core.limiter import limiter
 from app.core.security import create_access_token, hash_password, verify_password
-from app.models import User
+from app.models import TrustedContact, User
 from app.schemas import Token, UserOut, UserRegister
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -20,6 +20,7 @@ def register(request: Request, data: UserRegister, db: Session = Depends(get_db)
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El correo ya está registrado")
     user = User(email=data.email, name=data.name, password_hash=hash_password(data.password))
+    user.contacts = [TrustedContact(name=c.name, phone=c.phone) for c in data.contacts]
     db.add(user)
     db.commit()
     db.refresh(user)

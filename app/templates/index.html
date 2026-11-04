@@ -5,9 +5,15 @@
 
 <header class="absolute top-0 inset-x-0 z-[1000] flex items-center justify-between p-3 pointer-events-none">
   <h1 class="pointer-events-auto bg-slate-900/90 text-slate-50 font-bold text-lg px-3 py-2 rounded-full shadow">RutaSegura</h1>
-  <a id="auth-link" href="/login"
-     class="pointer-events-auto bg-slate-900/90 text-slate-50 text-sm font-medium px-4 py-2 rounded-full shadow focus-visible:outline"
-     aria-label="Iniciar sesión o cerrar sesión">Iniciar sesión</a>
+  <div class="flex gap-2">
+    <button id="open-contacts" type="button" aria-haspopup="dialog"
+      class="hidden pointer-events-auto bg-slate-900/90 text-slate-50 text-sm font-medium px-4 py-2 rounded-full shadow focus-visible:outline">
+      Contactos
+    </button>
+    <a id="auth-link" href="/login"
+       class="pointer-events-auto bg-slate-900/90 text-slate-50 text-sm font-medium px-4 py-2 rounded-full shadow focus-visible:outline"
+       aria-label="Iniciar sesión o cerrar sesión">Iniciar sesión</a>
+  </div>
 </header>
 
 <div id="map-error" role="status" aria-live="polite"
@@ -103,6 +109,52 @@
           class="flex-1 min-h-[44px] rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold focus-visible:outline">Enviar reporte</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal: emergencia (SOS) -->
+<div id="sos-modal" class="hidden fixed inset-0 z-[1300] bg-black/80 flex items-end sm:items-center justify-center p-4"
+  role="dialog" aria-modal="true" aria-labelledby="sos-modal-title">
+  <div class="bg-slate-900 border-2 border-red-500 rounded-2xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+    <h2 id="sos-modal-title" class="text-2xl font-extrabold text-red-400">Emergencia</h2>
+    <p id="sos-status" class="text-base text-slate-100" role="status" aria-live="assertive"></p>
+    <div id="sos-actions" class="space-y-3"></div>
+    <a href="tel:123"
+      class="flex items-center justify-center w-full min-h-[56px] rounded-xl bg-red-600 text-white text-lg font-bold focus-visible:outline">
+      Llamar al 123
+    </a>
+    <button type="button" data-close-modal="sos-modal"
+      class="w-full min-h-[48px] rounded-xl bg-slate-700 text-white font-semibold focus-visible:outline">Cerrar</button>
+  </div>
+</div>
+
+<!-- Modal: contactos de emergencia -->
+<div id="contacts-modal" class="hidden fixed inset-0 z-[1250] bg-black/70 flex items-end sm:items-center justify-center p-4"
+  role="dialog" aria-modal="true" aria-labelledby="contacts-modal-title">
+  <div class="bg-slate-900 rounded-2xl w-full max-w-md p-4 space-y-3 max-h-[90vh] overflow-y-auto">
+    <h2 id="contacts-modal-title" class="text-lg font-bold">Contactos de emergencia</h2>
+    <p class="text-sm text-slate-300">Recibirán tu ubicación por WhatsApp cuando uses el botón SOS.</p>
+    <ul id="contacts-list" class="space-y-2"></ul>
+    <form id="contact-form" class="space-y-2 border-t border-slate-700 pt-3">
+      <div>
+        <label for="contact-name" class="block text-sm font-medium mb-1">Nombre (ej. Mamá)</label>
+        <input id="contact-name" type="text" required maxlength="120" autocomplete="off"
+          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 focus-visible:outline">
+      </div>
+      <div>
+        <label for="contact-phone" class="block text-sm font-medium mb-1">Celular con WhatsApp</label>
+        <div class="flex">
+          <span class="flex items-center px-3 rounded-l-lg bg-slate-700 border border-slate-600 text-slate-200" aria-hidden="true">+57</span>
+          <input id="contact-phone" type="tel" inputmode="tel" required maxlength="20" placeholder="300 123 4567" autocomplete="off"
+            class="w-full min-h-[44px] rounded-r-lg bg-slate-800 border border-l-0 border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline">
+        </div>
+      </div>
+      <button type="submit"
+        class="w-full min-h-[48px] rounded-lg bg-green-700 hover:bg-green-600 text-white font-semibold focus-visible:outline">Agregar contacto</button>
+    </form>
+    <p id="contacts-status" class="text-sm text-slate-200 min-h-[1.25rem]" role="status" aria-live="polite"></p>
+    <button type="button" data-close-modal="contacts-modal"
+      class="w-full min-h-[48px] rounded-lg bg-slate-700 text-white font-semibold focus-visible:outline">Cerrar</button>
   </div>
 </div>
 
