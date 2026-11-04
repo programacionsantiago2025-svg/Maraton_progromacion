@@ -21,6 +21,12 @@
   No se pudo cargar el mapa base. Los puntos seguros, reportes y rutas siguen funcionando.
 </div>
 
+<div id="pick-banner" role="status" aria-live="polite"
+  class="hidden fixed z-[1100] top-16 inset-x-4 mx-auto max-w-md flex items-center justify-between gap-3 bg-sky-700 text-white text-sm font-semibold rounded-lg px-4 py-3 shadow-lg">
+  <span id="pick-banner-text">Toca el mapa para elegir el punto</span>
+  <button id="pick-cancel" type="button" class="shrink-0 min-h-[44px] px-2 underline focus-visible:outline">Cancelar</button>
+</div>
+
 <div class="fixed inset-x-0 bottom-0 z-[1000]">
   <!-- SOS anclado al borde superior del panel: sigue visible sin tapar sus controles -->
   <button id="sos-btn" type="button"
@@ -42,15 +48,31 @@
     <form id="route-form" class="space-y-2" aria-label="Buscar ruta segura">
       <div>
         <label for="origin" class="block text-sm font-medium mb-1">Origen</label>
-        <input id="origin" name="origin" type="text" required minlength="2" autocomplete="off"
-          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline"
-          placeholder="Ej: Calle 100 con 19, Bogotá">
+        <div class="flex gap-2">
+          <input id="origin" name="origin" type="text" required minlength="2" autocomplete="off"
+            class="flex-1 min-w-0 min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline"
+            placeholder="Escribe una dirección o usa los botones">
+          <button id="origin-locate" type="button" title="Usar mi ubicación" aria-label="Usar mi ubicación como origen"
+            class="shrink-0 w-11 min-h-[44px] rounded-lg bg-slate-700 hover:bg-slate-600 text-sky-300 flex items-center justify-center focus-visible:outline">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          </button>
+          <button type="button" data-pick="origin" title="Elegir en el mapa" aria-label="Elegir el origen en el mapa"
+            class="shrink-0 w-11 min-h-[44px] rounded-lg bg-slate-700 hover:bg-slate-600 text-emerald-300 flex items-center justify-center focus-visible:outline">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+          </button>
+        </div>
       </div>
       <div>
         <label for="destination" class="block text-sm font-medium mb-1">Destino</label>
-        <input id="destination" name="destination" type="text" required minlength="2" autocomplete="off"
-          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline"
-          placeholder="Ej: Parque de la 93, Bogotá">
+        <div class="flex gap-2">
+          <input id="destination" name="destination" type="text" required minlength="2" autocomplete="off"
+            class="flex-1 min-w-0 min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline"
+            placeholder="Escribe una dirección o elígela en el mapa">
+          <button type="button" data-pick="destination" title="Elegir en el mapa" aria-label="Elegir el destino en el mapa"
+            class="shrink-0 w-11 min-h-[44px] rounded-lg bg-slate-700 hover:bg-slate-600 text-rose-300 flex items-center justify-center focus-visible:outline">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+          </button>
+        </div>
       </div>
       <button type="submit"
         class="w-full min-h-[44px] rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold focus-visible:outline">

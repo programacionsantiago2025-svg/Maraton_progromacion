@@ -15,6 +15,17 @@
     .map-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9); }
     /* Baja los controles del mapa (zoom, atribución) para que no queden bajo la barra superior */
     .leaflet-top { top: 4.5rem; }
+    /* Marcadores de origen (A) y destino (B): pin con la punta en el punto exacto */
+    .endpoint-icon { background: none; border: none; }
+    .endpoint-pin {
+      width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      border: 2px solid #0f172a; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .endpoint-pin span { transform: rotate(45deg); color: #fff; font-weight: 800; font-size: 13px; }
+    .endpoint-pin.origin { background: #10b981; }
+    .endpoint-pin.destination { background: #e11d48; }
+    #map.pick-mode, #map.pick-mode .leaflet-interactive { cursor: crosshair; }
     :focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {

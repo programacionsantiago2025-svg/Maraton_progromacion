@@ -222,10 +222,16 @@
   // ---------- Panel inferior colapsable ----------
   const sheetToggle = document.getElementById('sheet-toggle');
   const sheetContent = document.getElementById('sheet-content');
+
+  function setSheetCollapsed(collapsed) {
+    if (!sheetToggle || !sheetContent) return;
+    sheetContent.classList.toggle('hidden', collapsed);
+    sheetToggle.setAttribute('aria-expanded', String(!collapsed));
+  }
+
   if (sheetToggle && sheetContent) {
     sheetToggle.addEventListener('click', () => {
-      const collapsed = sheetContent.classList.toggle('hidden');
-      sheetToggle.setAttribute('aria-expanded', String(!collapsed));
+      setSheetCollapsed(!sheetContent.classList.contains('hidden'));
     });
   }
 
@@ -268,20 +274,142 @@
     return card;
   }
 
+  // ---------- Origen y destino: texto libre, mi ubicación o un punto del mapa ----------
+  // Si el campo tiene coordenadas (GPS o mapa) se envían como "lat,lng"; si la persona
+  // escribe, se borran y se envía el texto para geocodificarlo en el backend.
+  const endpoints = {
+    origin: { input: document.getElementById('origin'), coords: null, name: 'el origen' },
+    destination: { input: document.getElementById('destination'), coords: null, name: 'el destino' },
+  };
+  const pickBanner = document.getElementById('pick-banner');
+  const pickBannerText = document.getElementById('pick-banner-text');
+  let pickingKind = null;
+
+  function placeEndpointMarker(kind, loc) {
+    if (window.RutaMap) window.RutaMap.setEndpointMarker(kind, loc, (moved) => setMapPoint(kind, moved));
+  }
+
+  function setEndpoint(kind, loc, label) {
+    endpoints[kind].coords = loc;
+    endpoints[kind].input.value = label;
+    placeEndpointMarker(kind, loc);
+  }
+
+  function endpointQuery(kind) {
+    const ep = endpoints[kind];
+    if (ep.coords) return `${ep.coords.lat.toFixed(6)},${ep.coords.lng.toFixed(6)}`;
+    return ep.input.value.trim();
+  }
+
+  // Nombre legible del punto elegido (si Nominatim no responde, se queda "Punto en el mapa")
+  async function reverseGeocode(loc) {
+    try {
+      const params = new URLSearchParams({
+        format: 'jsonv2', lat: loc.lat, lon: loc.lng, zoom: 18, 'accept-language': 'es',
+      });
+      const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`);
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      const a = data.address || {};
+      const street = a.road ? `${a.road}${a.house_number ? ` ${a.house_number}` : ''}` : data.name || '';
+      const city = a.city || a.town || a.village || a.municipality || '';
+      return [street, city].filter(Boolean).join(', ') || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  async function setMapPoint(kind, loc) {
+    setEndpoint(kind, loc, 'Punto en el mapa');
+    // Si ya había rutas dibujadas, se recalculan con el punto nuevo
+    if (currentPolylines.length && routeForm.requestSubmit) routeForm.requestSubmit();
+    const label = await reverseGeocode(loc);
+    if (label && endpoints[kind].coords === loc) endpoints[kind].input.value = label;
+  }
+
+  async function useMyLocation() {
+    if (!window.RutaMap) return;
+    const btn = document.getElementById('origin-locate');
+    btn.disabled = true;
+    try {
+      const loc = await window.RutaMap.locateUser();
+      setEndpoint('origin', loc, 'Mi ubicación');
+      window.RutaMap.map.setView([loc.lat, loc.lng], Math.max(window.RutaMap.map.getZoom(), 15));
+    } catch (err) {
+      showToast(`${err.message}. Revisa el permiso de ubicación del navegador.`);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function stopPicking() {
+    if (!pickingKind) return;
+    pickingKind = null;
+    if (window.RutaMap) window.RutaMap.cancelPick();
+    pickBanner.classList.add('hidden');
+    setSheetCollapsed(false);
+  }
+
+  function startPicking(kind) {
+    if (!window.RutaMap) {
+      showToast('El mapa no está disponible; escribe la dirección.');
+      return;
+    }
+    stopPicking();
+    pickingKind = kind;
+    pickBannerText.textContent = `Toca el mapa para elegir ${endpoints[kind].name}`;
+    pickBanner.classList.remove('hidden');
+    // Se esconde el panel para dejar el mapa libre mientras se elige
+    setSheetCollapsed(true);
+    window.RutaMap.startPick((loc) => {
+      stopPicking();
+      setMapPoint(kind, loc);
+    });
+  }
+
   if (routeForm) {
+    Object.keys(endpoints).forEach((kind) => {
+      const ep = endpoints[kind];
+      ep.input.addEventListener('input', () => {
+        if (!ep.coords) return;
+        ep.coords = null;
+        if (window.RutaMap) window.RutaMap.clearEndpointMarker(kind);
+      });
+      // Al tocar un campo con "Mi ubicación" o un punto del mapa, se selecciona para reemplazarlo
+      ep.input.addEventListener('focus', () => {
+        if (ep.coords) ep.input.select();
+      });
+    });
+
+    document.getElementById('origin-locate').addEventListener('click', useMyLocation);
+    document.querySelectorAll('[data-pick]').forEach((btn) => {
+      btn.addEventListener('click', () => startPicking(btn.getAttribute('data-pick')));
+    });
+    document.getElementById('pick-cancel').addEventListener('click', stopPicking);
+
+    // El origen arranca en la ubicación actual si el navegador la da
+    if (window.RutaMap) {
+      window.RutaMap.initialLocation.then((loc) => {
+        if (loc && !endpoints.origin.input.value.trim()) setEndpoint('origin', loc, 'Mi ubicación');
+      });
+    }
+
     routeForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const origin = document.getElementById('origin').value;
-      const destination = document.getElementById('destination').value;
+      const origin = endpointQuery('origin');
+      const destination = endpointQuery('destination');
       routeStatus.textContent = 'Buscando rutas seguras…';
       routeResults.innerHTML = '';
       try {
         const params = new URLSearchParams({ origin, destination });
         const data = await apiFetch(`/api/routes?${params.toString()}`);
         routeStatus.textContent = `${data.rutas.length} ruta(s) encontrada(s).`;
+        // Primero las tarjetas, para que el encuadre del mapa conozca la altura final del panel
+        data.rutas.forEach((ruta, index) => routeResults.appendChild(renderRouteCard(ruta, index)));
         // Si el mapa no cargó, igual se muestran las tarjetas con las rutas
         currentPolylines = window.RutaMap ? window.RutaMap.drawRoutes(data.rutas) : [];
-        data.rutas.forEach((ruta, index) => routeResults.appendChild(renderRouteCard(ruta, index)));
+        placeEndpointMarker('origin', { lat: data.origin[0], lng: data.origin[1] });
+        placeEndpointMarker('destination', { lat: data.destination[0], lng: data.destination[1] });
       } catch (err) {
         routeStatus.textContent = err.message;
       }
@@ -308,6 +436,7 @@
 
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') {
+      stopPicking();
       document.querySelectorAll('[role="dialog"]').forEach((modal) => modal.classList.add('hidden'));
     }
   });

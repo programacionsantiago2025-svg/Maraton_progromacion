@@ -37,6 +37,7 @@
   const safePointsLayer = L.layerGroup().addTo(map);
   const reportsLayer = L.layerGroup().addTo(map);
   const routesLayer = L.layerGroup().addTo(map);
+  const endpointsLayer = L.layerGroup().addTo(map);
 
   const SAFE_POINT_STYLE = {
     cai: { color: '#38bdf8', label: 'CAI' },
@@ -152,7 +153,11 @@
     });
     if (polylines.length) {
       const group = L.featureGroup(polylines);
-      map.fitBounds(group.getBounds(), { padding: [40, 40] });
+      // Deja libre la parte que tapa el panel inferior para que la ruta se vea completa
+      const sheet = document.getElementById('bottom-sheet');
+      const covered = sheet ? Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top) : 0;
+      const bottomPad = Math.min(covered, window.innerHeight * 0.6) + 40;
+      map.fitBounds(group.getBounds(), { paddingTopLeft: [40, 110], paddingBottomRight: [40, bottomPad] });
     }
     return polylines;
   }
@@ -164,24 +169,113 @@
     });
   }
 
-  function locateUser() {
+  // ---------- Ubicación del usuario (punto azul) ----------
+  let userMarker = null;
+
+  function showUserLocation(loc) {
+    if (userMarker) {
+      userMarker.setLatLng([loc.lat, loc.lng]);
+      return;
+    }
+    userMarker = L.circleMarker([loc.lat, loc.lng], {
+      radius: 8,
+      color: '#ffffff',
+      weight: 3,
+      fillColor: '#3b82f6',
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(map);
+  }
+
+  function locateUser(options) {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocalización no disponible en este navegador'));
         return;
       }
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          showUserLocation(loc);
+          resolve(loc);
+        },
         () => reject(new Error('No se pudo obtener tu ubicación')),
-        { enableHighAccuracy: true, timeout: 8000 }
+        Object.assign({ enableHighAccuracy: true, timeout: 8000 }, options)
       );
     });
+  }
+
+  // ---------- Marcadores de origen (A) y destino (B), arrastrables ----------
+  const endpointMarkers = { origin: null, destination: null };
+  const ENDPOINT_INFO = {
+    origin: { letter: 'A', title: 'Origen (arrastra para moverlo)' },
+    destination: { letter: 'B', title: 'Destino (arrastra para moverlo)' },
+  };
+
+  function setEndpointMarker(kind, loc, onMove) {
+    let marker = endpointMarkers[kind];
+    if (marker) {
+      marker.setLatLng([loc.lat, loc.lng]);
+      marker.off('dragend');
+    } else {
+      marker = L.marker([loc.lat, loc.lng], {
+        icon: L.divIcon({
+          className: 'endpoint-icon',
+          html: `<div class="endpoint-pin ${kind}"><span>${ENDPOINT_INFO[kind].letter}</span></div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 36],
+        }),
+        draggable: true,
+        title: ENDPOINT_INFO[kind].title,
+        zIndexOffset: 1000,
+      }).addTo(endpointsLayer);
+      endpointMarkers[kind] = marker;
+    }
+    if (onMove) {
+      marker.on('dragend', () => {
+        const p = marker.getLatLng();
+        onMove({ lat: p.lat, lng: p.lng });
+      });
+    }
+  }
+
+  function clearEndpointMarker(kind) {
+    if (!endpointMarkers[kind]) return;
+    endpointsLayer.removeLayer(endpointMarkers[kind]);
+    endpointMarkers[kind] = null;
+  }
+
+  // ---------- Elegir un punto tocando el mapa ----------
+  let pickHandler = null;
+
+  function cancelPick() {
+    if (pickHandler) map.off('click', pickHandler);
+    pickHandler = null;
+    map.getContainer().classList.remove('pick-mode');
+  }
+
+  function startPick(onPick) {
+    cancelPick();
+    pickHandler = (ev) => {
+      cancelPick();
+      onPick({ lat: ev.latlng.lat, lng: ev.latlng.lng });
+    };
+    map.on('click', pickHandler);
+    map.getContainer().classList.add('pick-mode');
   }
 
   map.on('moveend', () => {
     loadSafePoints();
     loadReports();
   });
+
+  // Al abrir, centrar el mapa donde está el usuario (Bogotá queda solo como respaldo)
+  const initialLocation = locateUser({ maximumAge: 60000 })
+    .then((loc) => {
+      if (!routesLayer.getLayers().length) map.setView([loc.lat, loc.lng], 15);
+      return loc;
+    })
+    .catch(() => null);
 
   window.RutaMap = {
     map,
@@ -191,6 +285,11 @@
     drawRoutes,
     highlightRoute,
     locateUser,
+    initialLocation,
+    setEndpointMarker,
+    clearEndpointMarker,
+    startPick,
+    cancelPick,
   };
 
   loadSafePoints();
