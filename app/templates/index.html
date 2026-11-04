@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}RutaSegura · Mapa{% endblock %}
+{% block content %}
+<div id="map" class="absolute inset-0" role="application" aria-label="Mapa de rutas y puntos seguros"></div>
+
+<header class="absolute top-0 inset-x-0 z-[1000] flex items-center justify-between p-3 pointer-events-none">
+  <h1 class="pointer-events-auto bg-slate-900/90 text-slate-50 font-bold text-lg px-3 py-2 rounded-full shadow">RutaSegura</h1>
+  <a id="auth-link" href="/login"
+     class="pointer-events-auto bg-slate-900/90 text-slate-50 text-sm font-medium px-4 py-2 rounded-full shadow focus-visible:outline"
+     aria-label="Iniciar sesión o cerrar sesión">Iniciar sesión</a>
+</header>
+
+<button id="sos-btn" type="button"
+  class="fixed z-[1100] bottom-28 right-4 w-16 h-16 rounded-full bg-red-600 text-white font-extrabold text-sm shadow-lg border-4 border-red-300 focus-visible:outline"
+  aria-label="Botón de emergencia SOS. Mantén presionado un segundo para enviar la alerta.">
+  SOS
+</button>
+<div id="sos-hint"
+  class="hidden fixed z-[1100] bottom-[11.5rem] right-4 bg-slate-900 text-slate-50 text-xs px-2 py-1 rounded"
+  role="status" aria-live="polite">Mantén presionado…</div>
+
+<section id="bottom-sheet" class="fixed inset-x-0 bottom-0 z-[1000] bg-slate-900/95 rounded-t-2xl shadow-2xl max-h-[70vh] overflow-y-auto">
+  <button id="sheet-toggle" type="button" aria-label="Expandir o colapsar el panel" aria-expanded="true"
+    class="w-full flex justify-center py-2 focus-visible:outline">
+    <span class="w-10 h-1.5 bg-slate-500 rounded-full" aria-hidden="true"></span>
+  </button>
+
+  <div id="sheet-content" class="px-4 pb-6 space-y-4">
+    <form id="route-form" class="space-y-2" aria-label="Buscar ruta segura">
+      <div>
+        <label for="origin" class="block text-sm font-medium mb-1">Origen</label>
+        <input id="origin" name="origin" type="text" required minlength="2" autocomplete="off"
+          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline"
+          placeholder="Ej: Calle 100 con 19, Bogotá">
+      </div>
+      <div>
+        <label for="destination" class="block text-sm font-medium mb-1">Destino</label>
+        <input id="destination" name="destination" type="text" required minlength="2" autocomplete="off"
+          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-base text-slate-50 placeholder-slate-400 focus-visible:outline"
+          placeholder="Ej: Parque de la 93, Bogotá">
+      </div>
+      <button type="submit"
+        class="w-full min-h-[44px] rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold focus-visible:outline">
+        Buscar ruta segura
+      </button>
+    </form>
+
+    <div id="route-status" class="text-sm text-slate-300 min-h-[1.25rem]" role="status" aria-live="polite"></div>
+    <div id="route-results" class="space-y-2" aria-label="Resultados de rutas"></div>
+
+    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-700">
+      <button id="open-report-modal" type="button" aria-haspopup="dialog"
+        class="min-h-[44px] rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold focus-visible:outline">
+        Reportar
+      </button>
+      <button id="open-guardian-modal" type="button" aria-haspopup="dialog"
+        class="min-h-[44px] rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold focus-visible:outline">
+        Modo Guardián
+      </button>
+    </div>
+    <div id="guardian-status" class="hidden rounded-lg bg-slate-800 p-3 text-sm space-y-2" role="status" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- Modal: reportar -->
+<div id="report-modal" class="hidden fixed inset-0 z-[1200] bg-black/70 flex items-end sm:items-center justify-center p-4"
+  role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+  <div class="bg-slate-900 rounded-2xl w-full max-w-md p-4 space-y-3">
+    <h2 id="report-modal-title" class="text-lg font-bold">Reportar una situación</h2>
+    <form id="report-form" class="space-y-3">
+      <div>
+        <label for="report-type" class="block text-sm font-medium mb-1">Tipo</label>
+        <select id="report-type" name="type" required
+          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-slate-50 focus-visible:outline">
+          <option value="poca_luz">Poca luz / mal iluminado</option>
+          <option value="acoso">Acoso</option>
+          <option value="calle_sola">Calle sola / insegura</option>
+          <option value="zona_segura">Zona segura (reporte positivo)</option>
+        </select>
+      </div>
+      <div>
+        <label for="report-severity" class="block text-sm font-medium mb-1">Severidad (1 leve · 5 grave): <output id="severity-value" for="report-severity">3</output></label>
+        <input id="report-severity" name="severity" type="range" min="1" max="5" value="3" step="1" class="w-full">
+      </div>
+      <div>
+        <label for="report-description" class="block text-sm font-medium mb-1">Descripción (opcional, máx. 280)</label>
+        <textarea id="report-description" name="description" maxlength="280" rows="3"
+          class="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-slate-50 focus-visible:outline"></textarea>
+      </div>
+      <p id="report-location-status" class="text-xs text-slate-400" role="status" aria-live="polite">Obteniendo tu ubicación…</p>
+      <div class="flex gap-2 pt-2">
+        <button type="button" data-close-modal="report-modal"
+          class="flex-1 min-h-[44px] rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold focus-visible:outline">Cancelar</button>
+        <button type="submit"
+          class="flex-1 min-h-[44px] rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold focus-visible:outline">Enviar reporte</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: guardián -->
+<div id="guardian-modal" class="hidden fixed inset-0 z-[1200] bg-black/70 flex items-end sm:items-center justify-center p-4"
+  role="dialog" aria-modal="true" aria-labelledby="guardian-modal-title">
+  <div class="bg-slate-900 rounded-2xl w-full max-w-md p-4 space-y-3">
+    <h2 id="guardian-modal-title" class="text-lg font-bold">Modo Guardián</h2>
+    <p class="text-sm text-slate-300">Avísanos cuándo llegas. Si no confirmas a tiempo, la sesión pasa a alerta.</p>
+    <form id="guardian-form" class="space-y-3">
+      <div>
+        <label for="guardian-minutes" class="block text-sm font-medium mb-1">¿En cuántos minutos llegas?</label>
+        <input id="guardian-minutes" name="minutes" type="number" min="1" max="240" value="20" required
+          class="w-full min-h-[44px] rounded-lg bg-slate-800 border border-slate-600 px-3 text-slate-50 focus-visible:outline">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button type="button" data-close-modal="guardian-modal"
+          class="flex-1 min-h-[44px] rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold focus-visible:outline">Cancelar</button>
+        <button type="submit"
+          class="flex-1 min-h-[44px] rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold focus-visible:outline">Iniciar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/map.js" defer></script>
+<script src="/static/js/app.js" defer></script>
+{% endblock %}
