@@ -96,7 +96,9 @@ rastrearse hasta reportes y puntos seguros concretos. Se documenta explícitamen
 ## 6. Seguridad (OWASP Top 10) — qué se implementó y dónde
 
 - **A02 Fallas criptográficas**: contraseñas con Argon2id (`pwdlib`), JWT firmado con
-  `SECRET_KEY` desde variable de entorno (`app/core/security.py`).
+  `SECRET_KEY` desde variable de entorno (`app/core/security.py`). La clave es obligatoria y
+  debe tener al menos 32 caracteres (RFC 7518 §3.2); la app no arranca con una más corta
+  (`app/core/config.py`).
 - **A01 Control de acceso roto**: `get_current_user` (`app/core/deps.py`) exige JWT válido;
   los endpoints de guardián/SOS/contactos comprueban que el recurso pertenezca al
   `user_id` autenticado (`app/routers/guardian.py::_get_session_or_404`).
